@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Pretendard - 한글 최적화 */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
+
+/* Cormorant Garamond - 영문 디스플레이 */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+:root {
+  --bg: #FAFAF7;
+  --bg-deep: #0A0A0A;
+  --ink: #18181B;
+  --ink-muted: #71717A;
+  --ink-soft: #A1A1AA;
+  --line: #E7E5DF;
+  --line-soft: #F0EFEA;
+  --card: #FFFFFF;
+  --accent: #B45309;
+  --accent-soft: #C2845A;
+  --accent-bg: #FDF6EC;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Pretendard Variable', Pretendard, system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  letter-spacing: -0.01em;
+}
+
+.font-display {
+  font-family: 'Cormorant Garamond', 'Nanum Myeongjo', serif;
+  letter-spacing: -0.02em;
+  font-feature-settings: "ss01";
+}
+
+/* Hero blackhole - CSS만으로 구현 (이미지 파일 없이도 작동) */
+.hero-blackhole {
+  position: relative;
+  background: radial-gradient(
+    circle at 50% 50%,
+    #000000 0%,
+    #050505 18%,
+    #0d0a08 32%,
+    #1a1108 44%,
+    #3d2410 56%,
+    #6b3a14 64%,
+    #a35a1a 70%,
+    #c97a26 74%,
+    #6b3a14 80%,
+    #1a1108 88%,
+    #050505 100%
+  );
+}
+
+.hero-blackhole::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0%, transparent 28%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,0.95) 100%),
+    radial-gradient(circle at 50% 50%, rgba(196,124,38,0.0) 22%, rgba(196,124,38,0.35) 30%, rgba(196,124,38,0.0) 42%);
+  mix-blend-mode: screen;
+}
+
+.hero-blackhole::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 18% 22%, rgba(255,255,255,0.55), transparent 60%),
+    radial-gradient(1px 1px at 82% 18%, rgba(255,255,255,0.4), transparent 60%),
+    radial-gradient(1.2px 1.2px at 75% 76%, rgba(255,255,255,0.5), transparent 60%),
+    radial-gradient(0.8px 0.8px at 22% 82%, rgba(255,255,255,0.35), transparent 60%),
+    radial-gradient(1px 1px at 12% 60%, rgba(255,255,255,0.35), transparent 60%),
+    radial-gradient(1px 1px at 88% 50%, rgba(255,255,255,0.45), transparent 60%),
+    radial-gradient(0.8px 0.8px at 50% 12%, rgba(255,255,255,0.35), transparent 60%),
+    radial-gradient(0.8px 0.8px at 50% 92%, rgba(255,255,255,0.35), transparent 60%);
+  opacity: 0.85;
+}
+
+.noise-overlay {
+  position: relative;
+}
+.noise-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.4'/></svg>");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+}
+
+/* 인쇄용 스타일 */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-break-before {
+    page-break-before: always;
+  }
+  .hero-blackhole {
+    background: white !important;
+  }
+}
+
+/* 스크롤바 톤다운 (선택) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4d2cc;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 포커스 링 */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 텍스트 영역 기본 */
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}

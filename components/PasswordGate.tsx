@@ -7,15 +7,18 @@ interface PasswordGateProps {
   onUnlock: () => void;
 }
 
-// localStorage 키 (이 파일 안에서만 정의)
 const LS_INVITE_CODE = "sss_invite_code";
 const LS_NICKNAME = "sss_nickname";
 
-// 닉네임에서 개인정보로 의심되는 패턴(가벼운 경고용, 차단은 하지 않음)
+const allowedCodes = Array.from(
+  { length: 100 },
+  (_, i) => `SSS-${String(i + 1).padStart(3, "0")}`
+);
+
 function looksLikePersonalInfo(value: string): boolean {
   if (!value) return false;
-  if (/@/.test(value)) return true;                       // 이메일
-  if (/\d{6,}/.test(value)) return true;                  // 전화번호/생년월일 등 긴 숫자
+  if (/@/.test(value)) return true;
+  if (/\d{6,}/.test(value)) return true;
   if (/(010|gmail|naver|kakao|hanmail|outlook)/i.test(value)) return true;
   return false;
 }
@@ -26,28 +29,17 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // 환경변수 우선순위:
-  //   1) NEXT_PUBLIC_INVITE_CODE
-  //   2) NEXT_PUBLIC_APP_PASSWORD (이전 버전 호환)
-  //   3) 기본값 "SSS-014"
-  const expected =
-    process.env.NEXT_PUBLIC_INVITE_CODE ||
-    process.env.NEXT_PUBLIC_APP_PASSWORD ||
-    "SSS-014";
-
   useEffect(() => {
-    // 이전에 입력했던 값이 있으면 복원 (둘 다 비식별 정보)
     if (typeof window !== "undefined") {
-      const savedCode = window.localStorage.getItem(LS_INVITE_CODE) || "";
       const savedNick = window.localStorage.getItem(LS_NICKNAME) || "";
-      if (savedCode) setInviteCode(savedCode);
       if (savedNick) setNickname(savedNick);
     }
-    // 첫 입력 칸에 포커스
+
     const t = setTimeout(() => {
       const el = document.getElementById("invite-code-input");
       if (el) (el as HTMLInputElement).focus();
     }, 200);
+
     return () => clearTimeout(t);
   }, []);
 
@@ -57,42 +49,41 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
     e.preventDefault();
     setError("");
 
-    const code = inviteCode.trim();
+    const code = inviteCode.trim().toUpperCase();
     const nick = nickname.trim();
 
     if (!code) {
       setError("초대코드를 입력해 주세요.");
       return;
     }
+
     if (!nick) {
       setError("닉네임을 입력해 주세요.");
       return;
     }
+
     if (nick.length > 20) {
       setError("닉네임은 20자 이내로 입력해 주세요.");
       return;
     }
 
     setSubmitting(true);
-    // 살짝 딜레이로 깜빡임 방지
+
     setTimeout(() => {
-      if (code !== expected) {
+      if (!allowedCodes.includes(code)) {
         setError("초대코드가 일치하지 않습니다.");
         setSubmitting(false);
         return;
       }
 
-      // 성공 처리
       try {
         if (typeof window !== "undefined") {
           window.localStorage.setItem(LS_INVITE_CODE, code);
           window.localStorage.setItem(LS_NICKNAME, nick);
         }
-      } catch {
-        // localStorage가 차단된 환경이어도 진행은 가능하게
-      }
+      } catch {}
 
-      setSessionFlag(SESSION_KEYS.authenticated, true); // sessionStorage sss_authenticated = "1"
+      setSessionFlag(SESSION_KEYS.authenticated, true);
       onUnlock();
     }, 250);
   }
@@ -104,11 +95,13 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
           <div className="text-[10px] tracking-[0.32em] uppercase text-white/40 mb-5">
             Private Entrance
           </div>
+
           <h1 className="font-display text-4xl md:text-5xl leading-tight mb-1">
             Silent
             <br />
             Success Society
           </h1>
+
           <p className="text-xs tracking-[0.18em] uppercase text-white/40 mt-4">
             Initiation Guide
           </p>
@@ -121,7 +114,6 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-            {/* 초대코드 */}
             <div>
               <label
                 htmlFor="invite-code-input"
@@ -129,12 +121,12 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
               >
                 Invite Code · 초대코드
               </label>
+
               <input
                 id="invite-code-input"
                 type="text"
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value)}
-                placeholder="SSS-XXX"
                 className="w-full bg-transparent border border-white/20 rounded-md px-4 py-3 text-base text-white placeholder-white/25 focus:border-[var(--accent-soft)] outline-none transition-colors"
                 autoComplete="off"
                 spellCheck={false}
@@ -142,7 +134,6 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
               />
             </div>
 
-            {/* 닉네임 */}
             <div>
               <label
                 htmlFor="nickname-input"
@@ -150,6 +141,7 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
               >
                 Nickname · 닉네임
               </label>
+
               <input
                 id="nickname-input"
                 type="text"
@@ -162,7 +154,6 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
                 maxLength={20}
               />
 
-              {/* 개인정보 입력 금지 안내 */}
               <p className="text-[11px] text-white/40 mt-2 leading-relaxed">
                 실명, 이메일, 전화번호, 학교명, 직장명 등{" "}
                 <span className="text-white/60">개인을 특정할 수 있는 정보</span>는

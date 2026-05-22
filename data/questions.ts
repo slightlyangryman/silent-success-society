@@ -187,7 +187,7 @@ export const QUESTIONS: Question[] = [
   { id: "org_04", section: "org", label: "조직 활동 준비도", text: "나는 완벽한 결과보다 작은 시도를 공유할 수 있다.", reverse: false },
   { id: "org_05", section: "org", label: "조직 활동 준비도", text: "나는 종교, 정치, 사상, 영업, 투자 권유 없이 안전하게 활동할 수 있다.", reverse: false },
   { id: "org_06", section: "org", label: "조직 활동 준비도", text: "나는 내 성과를 자랑하기보다 시행착오를 나눌 수 있다.", reverse: false },
-  { id: "org_07", section: "org", label: "조직 활동 준비도", text: "나는 다른 사람의 전투를 존중할 수 있다.", reverse: false },
+  { id: "org_07", section: "org", label: "조직 활동 준비도", text: "나는 다른 사람의 활동을 존중할 수 있다.", reverse: false },
 ];
 
 // 페이지 단위로 나누기 (5~8문항). 각 섹션을 하나의 페이지로 둠.

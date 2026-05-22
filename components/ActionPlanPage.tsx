@@ -237,7 +237,7 @@ export default function ActionPlanPage({
           onClick={onComplete}
           className="bg-[var(--ink)] text-white rounded-md py-3.5 px-6 text-sm font-medium tracking-wide hover:bg-black transition-colors flex-1"
         >
-          요약 화면 보기 →
+          전체 실행계획 보기 →
         </button>
       </div>
       <p className="text-[11px] text-[var(--ink-soft)] text-center mt-4">

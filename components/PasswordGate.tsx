@@ -7,8 +7,13 @@ interface PasswordGateProps {
   onUnlock: () => void;
 }
 
+type SuccessAnswer = "yes" | "no" | "";
+
 const LS_SUCCESS_ANSWER = "sss_success_answer";
 const LS_NICKNAME = "sss_nickname";
+const LS_ACCESS_LOCK_UNTIL = "sss_access_lock_until";
+
+const LOCK_DURATION_MS = 5 * 60 * 1000;
 
 function looksLikePersonalInfo(value: string): boolean {
   if (!value) return false;
@@ -18,16 +23,44 @@ function looksLikePersonalInfo(value: string): boolean {
   return false;
 }
 
+function formatRemainingTime(ms: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes <= 0) return `${seconds}초`;
+  return `${minutes}분 ${String(seconds).padStart(2, "0")}초`;
+}
+
 export default function PasswordGate({ onUnlock }: PasswordGateProps) {
-  const [successAnswer, setSuccessAnswer] = useState<"yes" | "no" | "">("");
+  const [successAnswer, setSuccessAnswer] = useState<SuccessAnswer>("");
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [lockUntil, setLockUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  const isLocked = lockUntil !== null && lockUntil > now;
+  const remainingLockTime = isLocked ? lockUntil - now : 0;
+  const nicknameLooksPersonal = looksLikePersonalInfo(nickname);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedNick = window.localStorage.getItem(LS_NICKNAME) || "";
       if (savedNick) setNickname(savedNick);
+
+      const savedLockUntil = Number(
+        window.localStorage.getItem(LS_ACCESS_LOCK_UNTIL) || 0
+      );
+
+      if (savedLockUntil && savedLockUntil > Date.now()) {
+        setLockUntil(savedLockUntil);
+        setSuccessAnswer("no");
+        setError("언젠가 성공하시길.");
+        setSessionFlag(SESSION_KEYS.authenticated, false);
+      } else {
+        window.localStorage.removeItem(LS_ACCESS_LOCK_UNTIL);
+      }
     }
 
     const t = setTimeout(() => {
@@ -38,16 +71,77 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
     return () => clearTimeout(t);
   }, []);
 
-  const nicknameLooksPersonal = looksLikePersonalInfo(nickname);
+  useEffect(() => {
+    if (!lockUntil) return;
+
+    const interval = setInterval(() => {
+      const currentTime = Date.now();
+      setNow(currentTime);
+
+      if (lockUntil <= currentTime) {
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem(LS_ACCESS_LOCK_UNTIL);
+        }
+
+        setLockUntil(null);
+        setSuccessAnswer("");
+        setError("");
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lockUntil]);
+
+  function lockAccess() {
+    const until = Date.now() + LOCK_DURATION_MS;
+
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(LS_ACCESS_LOCK_UNTIL, String(until));
+        window.localStorage.setItem(LS_SUCCESS_ANSWER, "no");
+      }
+    } catch {}
+
+    setSessionFlag(SESSION_KEYS.authenticated, false);
+    setLockUntil(until);
+    setNow(Date.now());
+    setSuccessAnswer("no");
+    setSubmitting(false);
+    setError("언젠가 성공하시길.");
+  }
+
+  function handleYesClick() {
+    if (isLocked) {
+      setError("언젠가 성공하시길.");
+      return;
+    }
+
+    setSuccessAnswer("yes");
+    setError("");
+  }
+
+  function handleNoClick() {
+    lockAccess();
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
 
+    if (isLocked) {
+      setError("언젠가 성공하시길.");
+      return;
+    }
+
     const nick = nickname.trim();
 
     if (!successAnswer) {
       setError("질문에 답변해 주세요.");
+      return;
+    }
+
+    if (successAnswer === "no") {
+      lockAccess();
       return;
     }
 
@@ -66,8 +160,9 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
     setTimeout(() => {
       try {
         if (typeof window !== "undefined") {
-          window.localStorage.setItem(LS_SUCCESS_ANSWER, successAnswer);
+          window.localStorage.setItem(LS_SUCCESS_ANSWER, "yes");
           window.localStorage.setItem(LS_NICKNAME, nick);
+          window.localStorage.removeItem(LS_ACCESS_LOCK_UNTIL);
         }
       } catch {}
 
@@ -101,21 +196,31 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
             아래 질문에 답하고, 안에서 사용할 닉네임을 입력해 주세요.
           </p>
 
+          {isLocked && (
+            <div className="mb-6 rounded-md border border-[#E2B45D]/40 bg-[#E2B45D]/10 px-4 py-3 animate-fade-in">
+              <p className="text-sm text-[#E2B45D] font-medium">
+                언젠가 성공하시길.
+              </p>
+              <p className="text-xs text-white/50 mt-1">
+                {formatRemainingTime(remainingLockTime)} 뒤 다시 시도할 수 있습니다.
+              </p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div>
               <p className="block text-[11px] tracking-[0.18em] uppercase text-white/50 mb-3">
                 Question · 입장 질문
               </p>
 
-              <p className="text-lg text-white mb-4">
-                성공하시고 싶습니까?
-              </p>
+              <p className="text-lg text-white mb-4">성공하시고 싶습니까?</p>
 
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => setSuccessAnswer("yes")}
-                  className={`rounded-md border px-4 py-3 text-sm transition-colors ${
+                  onClick={handleYesClick}
+                  disabled={isLocked}
+                  className={`rounded-md border px-4 py-3 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                     successAnswer === "yes"
                       ? "border-white bg-white text-black"
                       : "border-white/20 text-white/70 hover:border-white/40"
@@ -126,8 +231,9 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
 
                 <button
                   type="button"
-                  onClick={() => setSuccessAnswer("no")}
-                  className={`rounded-md border px-4 py-3 text-sm transition-colors ${
+                  onClick={handleNoClick}
+                  disabled={isLocked}
+                  className={`rounded-md border px-4 py-3 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                     successAnswer === "no"
                       ? "border-white bg-white text-black"
                       : "border-white/20 text-white/70 hover:border-white/40"
@@ -152,7 +258,8 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 placeholder="안에서 불릴 호칭"
-                className="w-full bg-transparent border border-white/20 rounded-md px-4 py-3 text-base text-white placeholder-white/25 focus:border-[var(--accent-soft)] outline-none transition-colors"
+                disabled={isLocked}
+                className="w-full bg-transparent border border-white/20 rounded-md px-4 py-3 text-base text-white placeholder-white/25 focus:border-[var(--accent-soft)] outline-none transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 autoComplete="off"
                 spellCheck={false}
                 maxLength={20}
@@ -165,7 +272,7 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
                 않습니다.
               </p>
 
-              {nicknameLooksPersonal && (
+              {nicknameLooksPersonal && !isLocked && (
                 <p className="text-[11px] text-[#E2B45D] mt-2 animate-fade-in">
                   입력한 값에 개인정보로 보이는 패턴이 포함되어 있어요. 닉네임은
                   실명이나 연락처가 아닌, 안에서만 쓸 별칭으로 적어 주세요.
@@ -179,10 +286,19 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
 
             <button
               type="submit"
-              disabled={submitting || !successAnswer || !nickname.trim()}
+              disabled={
+                submitting ||
+                isLocked ||
+                successAnswer !== "yes" ||
+                !nickname.trim()
+              }
               className="w-full mt-2 bg-white text-black rounded-md py-3.5 text-sm font-medium tracking-wide hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              {submitting ? "확인 중…" : "입장하기"}
+              {isLocked
+                ? "입장 제한 중"
+                : submitting
+                ? "확인 중…"
+                : "입장하기"}
             </button>
           </form>
         </div>

@@ -7,13 +7,8 @@ interface PasswordGateProps {
   onUnlock: () => void;
 }
 
-const LS_INVITE_CODE = "sss_invite_code";
+const LS_SUCCESS_ANSWER = "sss_success_answer";
 const LS_NICKNAME = "sss_nickname";
-
-const allowedCodes = Array.from(
-  { length: 100 },
-  (_, i) => `SSS-${String(i + 1).padStart(3, "0")}`
-);
 
 function looksLikePersonalInfo(value: string): boolean {
   if (!value) return false;
@@ -24,7 +19,7 @@ function looksLikePersonalInfo(value: string): boolean {
 }
 
 export default function PasswordGate({ onUnlock }: PasswordGateProps) {
-  const [inviteCode, setInviteCode] = useState("");
+  const [successAnswer, setSuccessAnswer] = useState<"yes" | "no" | "">("");
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -36,7 +31,7 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
     }
 
     const t = setTimeout(() => {
-      const el = document.getElementById("invite-code-input");
+      const el = document.getElementById("nickname-input");
       if (el) (el as HTMLInputElement).focus();
     }, 200);
 
@@ -49,11 +44,10 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
     e.preventDefault();
     setError("");
 
-    const code = inviteCode.trim().toUpperCase();
     const nick = nickname.trim();
 
-    if (!code) {
-      setError("초대코드를 입력해 주세요.");
+    if (!successAnswer) {
+      setError("질문에 답변해 주세요.");
       return;
     }
 
@@ -70,15 +64,9 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
     setSubmitting(true);
 
     setTimeout(() => {
-      if (!allowedCodes.includes(code)) {
-        setError("초대코드가 일치하지 않습니다.");
-        setSubmitting(false);
-        return;
-      }
-
       try {
         if (typeof window !== "undefined") {
-          window.localStorage.setItem(LS_INVITE_CODE, code);
+          window.localStorage.setItem(LS_SUCCESS_ANSWER, successAnswer);
           window.localStorage.setItem(LS_NICKNAME, nick);
         }
       } catch {}
@@ -110,28 +98,44 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
         <div className="border border-white/15 rounded-lg p-6 md:p-8 bg-white/[0.02]">
           <p className="text-sm leading-relaxed text-white/70 mb-6">
             이 진단은 Silent Success Society 신규 참여자를 위한 비공개 자기진단입니다.
-            전달받은 초대코드와, 안에서 사용할 닉네임을 입력해 주세요.
+            아래 질문에 답하고, 안에서 사용할 닉네임을 입력해 주세요.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div>
-              <label
-                htmlFor="invite-code-input"
-                className="block text-[11px] tracking-[0.18em] uppercase text-white/50 mb-2"
-              >
-                Invite Code · 초대코드
-              </label>
+              <p className="block text-[11px] tracking-[0.18em] uppercase text-white/50 mb-3">
+                Question · 입장 질문
+              </p>
 
-              <input
-                id="invite-code-input"
-                type="text"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
-                className="w-full bg-transparent border border-white/20 rounded-md px-4 py-3 text-base text-white placeholder-white/25 focus:border-[var(--accent-soft)] outline-none transition-colors"
-                autoComplete="off"
-                spellCheck={false}
-                maxLength={32}
-              />
+              <p className="text-lg text-white mb-4">
+                성공하시고 싶습니까?
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSuccessAnswer("yes")}
+                  className={`rounded-md border px-4 py-3 text-sm transition-colors ${
+                    successAnswer === "yes"
+                      ? "border-white bg-white text-black"
+                      : "border-white/20 text-white/70 hover:border-white/40"
+                  }`}
+                >
+                  예
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSuccessAnswer("no")}
+                  className={`rounded-md border px-4 py-3 text-sm transition-colors ${
+                    successAnswer === "no"
+                      ? "border-white bg-white text-black"
+                      : "border-white/20 text-white/70 hover:border-white/40"
+                  }`}
+                >
+                  아니오
+                </button>
+              </div>
             </div>
 
             <div>
@@ -175,7 +179,7 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
 
             <button
               type="submit"
-              disabled={submitting || !inviteCode.trim() || !nickname.trim()}
+              disabled={submitting || !successAnswer || !nickname.trim()}
               className="w-full mt-2 bg-white text-black rounded-md py-3.5 text-sm font-medium tracking-wide hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? "확인 중…" : "입장하기"}
@@ -186,7 +190,7 @@ export default function PasswordGate({ onUnlock }: PasswordGateProps) {
         <p className="text-[11px] text-white/30 text-center mt-8 leading-relaxed">
           이 화면은 단순한 접근 제한을 위한 입구입니다.
           <br />
-          초대코드와 닉네임은 외부로 전송되지 않고 이 기기에만 남습니다.
+          답변과 닉네임은 외부로 전송되지 않고 이 기기에만 남습니다.
         </p>
       </div>
     </div>
